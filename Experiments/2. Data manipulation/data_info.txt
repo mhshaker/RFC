@@ -1,0 +1,36 @@
+\begin{tabular}{llrrr}
+\toprule
+{} &                            Name &  instances &  features &  major class \\
+\midrule
+1  &                      datatrieve &        130 &         8 &         91.5 \\
+2  &  kc1\_class\_level\_defectiveornot &        145 &        94 &         58.6 \\
+3  &                      parkinsons &        195 &        22 &         75.4 \\
+4  &            Sonar\_Mine\_Rock\_Data &        208 &        60 &         53.4 \\
+5  &                           spect &        267 &        22 &         79.4 \\
+6  &                          spectf &        267 &        44 &         79.4 \\
+7  &              HRCompetencyScores &        300 &         9 &         53.0 \\
+8  &                           heart &        303 &        13 &         54.5 \\
+9  &                       vertebral &        310 &         6 &         67.7 \\
+10 &                      ionosphere &        351 &        34 &         64.1 \\
+11 &                             kc3 &        458 &        39 &         90.6 \\
+12 &                             cm1 &        498 &        21 &         90.2 \\
+13 &                             kc2 &        522 &        21 &         79.5 \\
+14 &                            wdbc &        569 &        30 &         62.7 \\
+15 &                          breast &        569 &        30 &         62.7 \\
+16 &                        diabetes &        768 &         8 &         65.1 \\
+17 &                            QSAR &       1055 &        41 &         66.3 \\
+18 &                             pc1 &       1109 &        21 &         93.1 \\
+19 &                      hillvalley &       1212 &       100 &         50.0 \\
+20 &                            bank &       1372 &         4 &         55.5 \\
+21 &                             pc4 &       1458 &        37 &         87.8 \\
+22 &                             SPF &       1941 &        33 &         65.3 \\
+23 &                             kc1 &       2109 &        21 &         84.5 \\
+24 &                           scene &       2407 &       299 &         82.1 \\
+25 &                  Customer\_Churn &       3150 &        13 &         84.3 \\
+26 &                        spambase &       4601 &        57 &         60.6 \\
+27 &                            wilt &       4839 &         5 &         94.6 \\
+28 &                         phoneme &       5404 &         5 &         70.7 \\
+29 &                             jm1 &      10880 &        21 &         80.7 \\
+30 &                             eeg &      14980 &        14 &         55.1 \\
+\bottomrule
+\end{tabular}
