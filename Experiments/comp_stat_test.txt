@@ -1,0 +1,17 @@
+\begin{tabular}{lllll}
+\toprule
+{} &        acc &      brier &    logloss &        ece \\
+calib\_methods &            &            &            &            \\
+\midrule
+RF\_d          &            &            &            &            \\
+RF\_opt        &            &            &            &            \\
+RF\_large      &            &            &            &            \\
+Platt         &  \ding{51} &  \ding{51} &  \ding{51} &  \ding{55} \\
+ISO           &  \ding{51} &  \ding{51} &  \ding{51} &  \ding{51} \\
+Beta          &  \ding{51} &  \ding{51} &  \ding{51} &  \ding{51} \\
+VA            &  \ding{51} &  \ding{51} &  \ding{51} &            \\
+CT            &            &            &            &            \\
+PPA           &  \ding{51} &  \ding{51} &  \ding{51} &            \\
+Rank          &  \ding{51} &  \ding{55} &  \ding{55} &  \ding{55} \\
+\bottomrule
+\end{tabular}
