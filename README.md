@@ -1,7 +1,6 @@
 # Random Forest Calibration
 
-This repository contains the code for the paper: [Random Forest Calibration](https://to_be_added),
-written by Mohammad Hossein Shaker and Eyke Hüllermeier.
+This repository contains the code for the paper: [Random Forest Calibration](https://to_be_added)
 
 ![image](RF_depth.png)
 
