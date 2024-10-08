@@ -101,31 +101,6 @@ def balance_dataset(df):
 	df_balance = pd.concat([df_loss, df_upsampled_win])
 	return df_balance
 
-def load_arff_data(name="adult", convert_to_int=True, type="binary", log=True):
-	dataset = arff.load(open(f'/home/mhshaker/projects/uncertainty/Data/{name}.arff', 'r'))
-	df = pd.DataFrame(dataset['data'])
-	df = df.sample(frac=1).reset_index(drop=True)
-	df.rename(columns={ df.columns[-1]: "target" }, inplace = True)
-	if log:
-		print(f"Data name = {name}")
-		print(df.head())
-		print(df['target'].value_counts())
-
-	if convert_to_int:
-		for column in df:
-			df[column] = df[column].astype("category").cat.codes
-	# print(df.head())
-	# exit()
-	features = df.drop("target", axis=1)
-	# print(features)
-	features = preprocessing.scale(features)
-	# print(features)
-
-	# features_names = list(features.columns)
-	# target_names = ["class1","class2"]
-
-	return features, df.target #features_names, target_names
-
 def load_arff_2(data_name):
 	data = arff.loadarff(f"./Data/{data_name}.arff")
 	df = pd.DataFrame(data[0])
