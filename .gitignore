@@ -1,0 +1,5 @@
+*.pyc
+RFcalib
+Experiments/RF\ parameters/results
+Experiments/2. Data\ manipulation/results
+Experiments/Model\ comp/results

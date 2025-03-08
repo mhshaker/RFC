@@ -2,8 +2,13 @@ import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sklearn.calibration import _SigmoidCalibration
-from old.CalibrationM import convert_prob_2D
 from sklearn.metrics import brier_score_loss
+
+def convert_prob_2D(prob1D):
+    prob_second_class = np.ones(len(prob1D)) - prob1D
+    prob2D = np.concatenate((prob_second_class.reshape(-1,1), prob1D.reshape(-1,1)), axis=1)
+    return prob2D
+
 
 class CRF_calib(BaseEstimator, ClassifierMixin):
     

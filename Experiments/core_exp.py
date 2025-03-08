@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification
 from sklearn.manifold import TSNE
 import random
+from sklearn.preprocessing import MinMaxScaler
 
 np.random.seed(0)
 
@@ -192,6 +193,10 @@ def load_data_runs(params, exp_data_name, real_data_path=".", exp_key=""):
                 plt.close()
             else:
                 visualize_tsne(X, y, path, od, params)
+        
+        scaler = MinMaxScaler()
+        X = scaler.fit_transform(X)
+
 
         if params["split"] == "CV":
             random.seed(params["seed"])
@@ -203,6 +208,10 @@ def load_data_runs(params, exp_data_name, real_data_path=".", exp_key=""):
             data_folds = cal.split_train_calib_test(exp_data_name, X,y,params["test_split"], params["calib_split"],params["runs"],tp)
     else:
         X, y = dp.load_data(params["data_name"], real_data_path)
+        
+        scaler = MinMaxScaler()
+        X = scaler.fit_transform(X)
+
         if params["split"] == "CV":
             random.seed(params["seed"])
             np.random.seed(params["seed"])

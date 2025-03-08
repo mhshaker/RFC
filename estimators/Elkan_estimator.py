@@ -1,6 +1,11 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
-from old.CalibrationM import convert_prob_2D
+
+def convert_prob_2D(prob1D):
+    prob_second_class = np.ones(len(prob1D)) - prob1D
+    prob2D = np.concatenate((prob_second_class.reshape(-1,1), prob1D.reshape(-1,1)), axis=1)
+    return prob2D
+
 
 class Elkan_calib(BaseEstimator, ClassifierMixin):
     

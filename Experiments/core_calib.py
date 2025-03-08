@@ -16,6 +16,7 @@ import matplotlib.patches as patches
 from sklearn.model_selection import train_test_split
 from estimators.IR_RF_estimator import IR_RF
 from estimators.CRF_estimator import CRF_calib
+from estimators.Shaker_calib import Shaker_calib
 from estimators.Elkan_estimator import Elkan_calib
 from estimators.Venn_estimator import Venn_calib
 from estimators.VA_estimator import VA_calib
@@ -27,7 +28,6 @@ from sklearn.calibration import _SigmoidCalibration
 from betacal import BetaCalibration
 from sklearn.linear_model import LinearRegression
 from scipy.stats import binned_statistic
-from old.CalibrationM import confidance_ECE, convert_prob_2D
 from sklearn.metrics import brier_score_loss
 from sklearn.metrics import log_loss
 from sklearn.metrics import mean_squared_error
@@ -51,6 +51,12 @@ import random
 
 
 tvec = np.linspace(0.01, 0.99, 990)
+
+def convert_prob_2D(prob1D):
+    prob_second_class = np.ones(len(prob1D)) - prob1D
+    prob2D = np.concatenate((prob_second_class.reshape(-1,1), prob1D.reshape(-1,1)), axis=1)
+    return prob2D
+
 
 def kl_divergence(p, q,epsilon=1e-10):
     """
@@ -135,7 +141,7 @@ def calibration(data, params, seed=0):
     results_dict = {}
 
     # train model - hyper opt
-    if any(method in ["Platt", "ISO", "Beta", "VA", "PPA"] for method in calib_methods):
+    if any(method in ["Platt", "ISO", "Beta", "VA", "PPA", "Shaker"] for method in calib_methods):
         time_rf_opt_calib_s = time.time()
         random.seed(seed)
         np.random.seed(seed)
@@ -162,10 +168,6 @@ def calibration(data, params, seed=0):
         rf_p_test = RF.predict_proba(data["x_test"], params["laplace"])
 
         results_dict[data["name"] + "_RF_prob"] = rf_p_test
-        if "CL" in metrics:
-            results_dict[data["name"] + "_RF_prob_c"] = RF.predict_proba(data["X"], params["laplace"]) # prob c is on all X data
-        # results_dict[data["name"] + "_RF_prob_calib"] = rf_p_calib
-
 
     # all input probs to get the fit calib model
 
@@ -199,10 +201,6 @@ def calibration(data, params, seed=0):
         # print("labels\n", data["y_test"])
         # # RF depth ######################################## end 
 
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = rf_d.predict_proba(data["X"], params["laplace"])
-
-
     method = "RF_opt"
     if method in calib_methods:
         time_rf_opt_s = time.time()
@@ -218,8 +216,6 @@ def calibration(data, params, seed=0):
         rff_p_test = RF_opt.predict_proba(data["x_test"], params["laplace"]) # 
 
         results_dict[f"{data_name}_{method}_prob"] = rff_p_test
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = RF_opt.predict_proba(data["X"], params["laplace"]) #  
 
     method = "RF_large"
     if method in calib_methods:
@@ -248,12 +244,7 @@ def calibration(data, params, seed=0):
         # # RF depth ######################################## end 
 
 
-        results_dict[f"{data_name}_{method}_prob"] = RF_large_p_test_fd
-        if "CL" in metrics:
-            # results_dict[f"{data_name}_{method}_prob_c"] = bc.predict_largeRF(data["X"], data["x_train_calib"], data["y_train_calib"], RF)
-            results_dict[f"{data_name}_{method}_prob_c"] = rf_l.predict_proba(data["X"], params["laplace"])
-
-    
+        results_dict[f"{data_name}_{method}_prob"] = RF_large_p_test_fd    
 
     # method = "RF_opt_CT"
     # if method in calib_methods:
@@ -285,8 +276,6 @@ def calibration(data, params, seed=0):
         plat_p_test = convert_prob_2D(plat_calib.predict(rf_p_test[:,1]))
         results_dict[f"{data_name}_{method}_prob"] = plat_p_test
         results_dict[f"{data_name}_{method}_fit"] = plat_calib.predict(tvec)
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = convert_prob_2D(plat_calib.predict(results_dict[data["name"] + "_RF_prob_c"][:,1]))
 
     # ISO calibration on RF
     method = "ISO"
@@ -298,8 +287,6 @@ def calibration(data, params, seed=0):
         iso_p_test = convert_prob_2D(iso_calib.predict(rf_p_test[:,1]))
         results_dict[f"{data_name}_{method}_prob"] = iso_p_test
         results_dict[f"{data_name}_{method}_fit"] = iso_calib.predict(tvec)
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = convert_prob_2D(iso_calib.predict(results_dict[data["name"] + "_RF_prob_c"][:,1]))
 
     # CRF calibrator
     method = "PPA"
@@ -311,8 +298,19 @@ def calibration(data, params, seed=0):
         crf_p_test = crf_calib.predict(rf_p_test[:,1])
         results_dict[f"{data_name}_{method}_prob"] = crf_p_test
         results_dict[f"{data_name}_{method}_fit"] = crf_calib.predict(tvec)[:,1]
-        if "CL" in metrics: 
-            results_dict[f"{data_name}_{method}_prob_c"] = crf_calib.predict(results_dict[data["name"] + "_RF_prob_c"][:,1])
+
+    # Shaker calibrator
+    method = "Shaker"
+    if method in calib_methods:
+        time_shaker_s = time.time()
+        shaker_calib = Shaker_calib(noise_sample=1000)
+        shaker_calib.fit(data["x_calib"], y_p_calib, RF)
+
+        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_shaker_s + time_rf_opt_calib
+
+        shaker_p_test = convert_prob_2D(shaker_calib.predict(data["x_test"], RF)) # [:,1]
+        results_dict[f"{data_name}_{method}_prob"] = shaker_p_test
+        # results_dict[f"{data_name}_{method}_fit"] = shaker_calib.predict(tvec)[:,1]
 
     # Venn abers
     method = "VA"
@@ -324,9 +322,6 @@ def calibration(data, params, seed=0):
         va_p_test = convert_prob_2D(VA.predict(rf_p_test[:,1]))
         results_dict[f"{data_name}_{method}_prob"] = va_p_test
         results_dict[f"{data_name}_{method}_fit"] = VA.predict(tvec)
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = convert_prob_2D(VA.predict(results_dict[data["name"] + "_RF_prob_c"][:,1]))
-
 
     # Beta calibration
     method = "Beta"
@@ -338,8 +333,6 @@ def calibration(data, params, seed=0):
         beta_p_test = convert_prob_2D(beta_calib.predict(rf_p_test[:,1]))
         results_dict[f"{data_name}_{method}_prob"] = beta_p_test
         results_dict[f"{data_name}_{method}_fit"] = beta_calib.predict(tvec)
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = convert_prob_2D(beta_calib.predict(results_dict[data["name"] + "_RF_prob_c"][:,1]))
 
     # tree LR calib
     method = "tlr"
@@ -351,8 +344,6 @@ def calibration(data, params, seed=0):
         tlr_p_test = tlr_calib.predict(data["x_test"])
         results_dict[f"{data_name}_{method}_prob"] = tlr_p_test
         # results_dict[data["name"] + "_tlr_fit"] = tlr_calib.predict(convert_prob_2D(tvec))[:,1]
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = tlr_calib.predict(data["X"])
 
     method = "CT"
     if method in calib_methods:
@@ -376,8 +367,6 @@ def calibration(data, params, seed=0):
         rf_ct_p_test = rf_ct.predict_proba(data["x_test"], params["laplace"])
         
         results_dict[f"{data_name}_{method}_prob"] = rf_ct_p_test
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = rf_ct.predict_proba(data["X"], params["laplace"])
 
     # Elkan calibration
     method = "Elkan"
@@ -402,9 +391,6 @@ def calibration(data, params, seed=0):
         
         rank_p_test = convert_prob_2D(iso_rank.predict(x_test_rank))
         results_dict[f"{data_name}_{method}_prob"] = rank_p_test
-        # tvec_rank = RF.rank_refrence(data["x_test"], class_to_rank=1)
-        # results_dict[data["name"] + "_Rank_fit"] = iso_rank.predict(tvec_rank)
-
 
     ### models
 
@@ -430,9 +416,6 @@ def calibration(data, params, seed=0):
         dt_p_test = dt.predict_proba(data["x_test"])
         results_dict[f"{data_name}_{method}_prob"] = dt_p_test
         
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = dt.predict_proba(data["X"])
-
     method = "LR_opt"
     if method in calib_methods:
         time_lr_opt_s = time.time()
@@ -454,9 +437,6 @@ def calibration(data, params, seed=0):
         lr_p_test = lr.predict_proba(data["x_test"])
         results_dict[f"{data_name}_{method}_prob"] = lr_p_test
         
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = lr.predict_proba(data["X"])
-
     method = "LR_d"
     if method in calib_methods:
         time_lr_opt_s = time.time()
@@ -468,10 +448,6 @@ def calibration(data, params, seed=0):
         
         lr_p_test = lr.predict_proba(data["x_test"])
         results_dict[f"{data_name}_{method}_prob"] = lr_p_test
-        
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = lr.predict_proba(data["X"])
-
 
     method = "SVM_opt"
     if method in calib_methods:
@@ -501,9 +477,6 @@ def calibration(data, params, seed=0):
         svm_p_test = svm.predict_proba(data["x_test"])
         results_dict[f"{data_name}_{method}_prob"] = svm_p_test
         
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = svm.predict_proba(data["X"])
-
     method = "SVM_d"
     if method in calib_methods:
         time_svm_opt_s = time.time()
@@ -515,9 +488,6 @@ def calibration(data, params, seed=0):
         svm_p_test = svm.predict_proba(data["x_test"])
         results_dict[f"{data_name}_{method}_prob"] = svm_p_test
         
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = svm.predict_proba(data["X"])
-
     method = "DNN_opt"
     if method in calib_methods:
         time_nn_opt_s = time.time()
@@ -540,10 +510,6 @@ def calibration(data, params, seed=0):
 
         nn_p_test = nn.predict_proba(data["x_test"])
         results_dict[f"{data_name}_{method}_prob"] = nn_p_test
-        
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = nn.predict_proba(data["X"])
-
 
     method = "GNB_opt"
     if method in calib_methods:
@@ -562,10 +528,6 @@ def calibration(data, params, seed=0):
         gnb_p_test = gnb.predict_proba(data["x_test"])
         results_dict[f"{data_name}_{method}_prob"] = gnb_p_test
         
-        if "CL" in metrics:
-            results_dict[f"{data_name}_{method}_prob_c"] = gnb.predict_proba(data["X"])
-
-
     method = "XGB_opt"
     if method in calib_methods:
         time_xgb_s = time.time()
