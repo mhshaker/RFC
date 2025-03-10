@@ -68,7 +68,7 @@ def load_data_runs(params, exp_data_name, real_data_path=".", exp_key=""):
     data_runs = []
     od = 0
     if "synthetic" in params["data_name"]:
-        if params["data_name"] == "synthetic":
+        if params["data_name"] == "synthetic_g":
             X, y, tp, od = dp.make_classification_gaussian_with_true_prob(params["data_size"], 
                                                                     params["n_features"], 
                                                                     class1_mean_min = params["class1_mean_min"], 
@@ -80,101 +80,10 @@ def load_data_runs(params, exp_data_name, real_data_path=".", exp_key=""):
                                                                     class2_cov_min = params["class2_cov_min"], 
                                                                     class2_cov_max = params["class2_cov_max"]
                                                                     )
-            if params["exp_key"] == "Gaussian Mean Delta":
-                # exp_key = od
-                print(f"od {od:0.2f}")
-            # X, y, tp = dp.make_classification_mixture_gaussian_with_true_prob(params["data_size"], 
-            #                                                         params["n_features"], 
-            #                                                         4)
+        elif params["data_name"] == "synthetic_nn":
+            generator = dp.SyntheticDataGenerator(num_features=params["n_features"], num_classes=2, hidden_layers=[64,32],seed=params["seed"])
+            X, y, tp = generator.generate_data(num_samples=params["data_size"], temperature=0.1, mask_ratio=0, x_grid=False)
 
-        if params["data_name"] == "synthetic_o":
-            X, y, tp, od = dp.make_classification_gaussian_with_true_prob_overlap(params["data_size"], 
-                                                                    params["n_features"], 
-                                                                    class1_mean_min = params["class1_mean_min"], 
-                                                                    class1_mean_max = params["class1_mean_max"],
-                                                                    class1_cov_min = params["class1_cov_min"], 
-                                                                    class1_cov_max = params["class1_cov_max"],
-                                                                    delta = params["overlap_delta"],
-                                                                    seed = params["seed"] 
-                                                                    )
-            if params["exp_key"] == "Gaussian Mean Delta":
-                # exp_key = od
-                print(f"od {od:0.2f}")
-
-        elif params["data_name"] == "synthetic_chat":
-            X, y, tp = dp.c_g_p_chat(params["data_size"], 
-                                        params["n_features"], 
-                                        class1_mean_min = params["class1_mean_min"], 
-                                        class1_mean_max = params["class1_mean_max"],
-                                        class2_mean_min = params["class2_mean_min"], 
-                                        class2_mean_max = params["class2_mean_max"], 
-                                        class1_cov_min = params["class1_cov_min"], 
-                                        class1_cov_max = params["class1_cov_max"],
-                                        class2_cov_min = params["class2_cov_min"], 
-                                        class2_cov_max = params["class2_cov_max"]
-                                        )
-        elif params["data_name"] == "synthetic_gu":
-            X, y, tp = dp.c_gu_p_chat_mixed(params["data_size"], 
-                                        params["n_features"], 
-                                        # class1_mean_min = params["class1_mean_min"], 
-                                        # class1_mean_max = params["class1_mean_max"],
-                                        # class2_mean_min = params["class2_mean_min"], 
-                                        # class2_mean_max = params["class2_mean_max"], 
-                                        # class1_cov_min = params["class1_cov_min"], 
-                                        # class1_cov_max = params["class1_cov_max"],
-                                        # class2_cov_min = params["class2_cov_min"], 
-                                        # class2_cov_max = params["class2_cov_max"]
-                                        )
-        elif params["data_name"] == "synthetic_ge":
-            X, y, tp = dp.c_g_p_chat_mixed_exp_gaussian(params["data_size"], 
-                                        params["n_features"], 
-                                        )
-            
-        elif params["data_name"] == "synthetic_ng":
-            X, y, tp = dp.c_ng_p_chat(
-                n_samples= params["data_size"], 
-                n_features =params["n_features"], 
-                class1_min= params["class1_mean_min"], 
-                class1_max= params["class1_mean_max"], 
-                class2_scale= 1, 
-                seed= params["seed"])
-            
-        elif params["data_name"] == "synthetic_rt":
-            X, y, tp = dp.reg_true_prob(
-                n_samples= params["data_size"], 
-                n_features =params["n_features"], 
-                seed= params["seed"])
-        elif params["data_name"] == "synthetic_td":
-            X, y, tp = dp.c_t_p_chat(n_samples=params["data_size"], n_features=params["n_features"])
-            
-        elif params["data_name"] == "synthetic_mg":
-            X, y, tp = dp.make_classification_mixture_gaussian_with_true_prob(
-                n_samples= params["data_size"], 
-                n_features =params["n_features"], 
-                n_clusters= 4, 
-                same_cov= True, 
-                seed= params["seed"])
-
-        elif params["data_name"] == "synthetic2":
-            X_temp, _ = make_classification(n_samples=params["data_size"], 
-                        n_features= params["n_features"], 
-                        n_informative= params["n_informative"], 
-                        n_redundant= params["n_redundant"], 
-                        n_repeated= params["n_repeated"], 
-                        n_classes=2, 
-                        n_clusters_per_class=1, 
-                        weights=None, 
-                        flip_y=0.05, 
-                        class_sep=1.0, 
-                        hypercube=True, 
-                        shift=0.0, 
-                        scale=1.0, 
-                        shuffle=True, 
-                        random_state=params["seed"])
-            X, y, tp = dp.x_y_q(X_temp, n_copy = params["n_copy"], seed = params["seed"])
-
-        elif params["data_name"] == "synthetic3":
-            X, y, tp = dp.make_classification_with_true_prob_3(params["data_size"], params["n_features"])
 
         if params["plot_data"]:
             colors = ['black', 'red']

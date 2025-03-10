@@ -303,7 +303,7 @@ def calibration(data, params, seed=0):
     method = "Shaker"
     if method in calib_methods:
         time_shaker_s = time.time()
-        shaker_calib = Shaker_calib(noise_sample=1000, n_jobs=params["n_jobs"])
+        shaker_calib = Shaker_calib()
         shaker_calib.fit(data["x_calib"], y_p_calib, RF)
 
         results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_shaker_s + time_rf_opt_calib
