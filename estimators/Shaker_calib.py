@@ -7,6 +7,11 @@ from skopt.space import Real
 from joblib import Parallel, delayed
 
 
+def convert_prob_2D(prob1D):
+    prob1D = np.clip(prob1D, 0, 1)  # Ensure valid probability range
+    prob_second_class = 1.0 - prob1D
+    return np.column_stack((prob_second_class, prob1D))
+
 class Shaker_calib(BaseEstimator, RegressorMixin):
     def __init__(self, initial_noise_level=0.1, noise_sample=50, global_noise=True, n_jobs=-1, seed=0):
         """
@@ -47,7 +52,7 @@ class Shaker_calib(BaseEstimator, RegressorMixin):
     def _determine_optimization_params(self, n_features):
         """Dynamically determine the number of optimization calls based on feature count."""
         base_calls = 50
-        base_random_starts = 10
+        base_random_starts = 20
         
         if self.global_noise:
             return base_calls, base_random_starts  # Global noise is 1D, so no need for more calls
@@ -97,7 +102,7 @@ class Shaker_calib(BaseEstimator, RegressorMixin):
         p_calib = self.predict(X, model)
         p_model = model.predict_proba(X)
 
-        bs_calib = brier_score_loss(y, p_calib)
+        bs_calib = brier_score_loss(y, p_calib[:,1])
         bs_model = brier_score_loss(y, p_model[:,1])
 
         if bs_calib >= bs_model:
@@ -113,4 +118,4 @@ class Shaker_calib(BaseEstimator, RegressorMixin):
             if self.noise_levels_ is None or self.a_ is None or self.b_ is None:
                 raise ValueError("Model has not been fitted yet.")
             ns_predictions_calib = self._get_noise_preds(X, model, self.noise_levels_)
-            return self._beta_transform(ns_predictions_calib[:, 1], self.a_, self.b_)
+            return convert_prob_2D(self._beta_transform(ns_predictions_calib[:, 1], self.a_, self.b_))

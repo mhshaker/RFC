@@ -174,7 +174,7 @@ def calibration(data, params, seed=0):
         # train model - hyper opt with x_train_calib
         rf = IR_RF(random_state=seed)
         RS_rf_opt = RandomizedSearchCV(rf, params["search_space"], scoring=["neg_brier_score"], refit="neg_brier_score", cv=params["opt_cv"], n_iter=params["opt_n_iter"], random_state=seed)
-        RS_rf_opt.fit(data["x_train_calib"], data["y_train_calib"])
+        RS_rf_opt.fit(data["x_train"], data["y_train"])
 
         results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_rf_opt_s
         RF_opt = RS_rf_opt.best_estimator_
@@ -236,7 +236,7 @@ def calibration(data, params, seed=0):
 
         results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_shaker_s + time_rf_opt_calib
 
-        shaker_p_test = convert_prob_2D(shaker_calib.predict(data["x_test"], RF)) # [:,1]
+        shaker_p_test = shaker_calib.predict(data["x_test"], RF)
         results_dict[f"{data_name}_{method}_prob"] = shaker_p_test
 
     # Venn abers
