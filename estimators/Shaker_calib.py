@@ -24,6 +24,7 @@ class Shaker_calib(BaseEstimator, RegressorMixin):
         self.a_ = None
         self.b_ = None
         self.seed = seed
+        self.forward = False
     
     def _add_noise(self, X, noise_levels):
         """Adds Gaussian noise to X using either global or per-feature noise levels."""
@@ -92,11 +93,24 @@ class Shaker_calib(BaseEstimator, RegressorMixin):
         """Optimize noise levels first, then optimize Beta calibration parameters."""
         self._optimize_noise_levels(X, y, model)
         self._optimize_beta_calibration(X, y, model)
+
+        p_calib = self.predict(X, model)
+        p_model = model.predict_proba(X)
+
+        bs_calib = brier_score_loss(y, p_calib)
+        bs_model = brier_score_loss(y, p_model[:,1])
+
+        if bs_calib >= bs_model:
+            self.forward = True
+
         return self
     
     def predict(self, X, model):
-        """Generate calibrated predictions using the learned noise levels and Beta calibration."""
-        if self.noise_levels_ is None or self.a_ is None or self.b_ is None:
-            raise ValueError("Model has not been fitted yet.")
-        ns_predictions_calib = self._get_noise_preds(X, model, self.noise_levels_)
-        return self._beta_transform(ns_predictions_calib[:, 1], self.a_, self.b_)
+        if self.forward:
+            return model.predict_proba(X)
+        else:
+            """Generate calibrated predictions using the learned noise levels and Beta calibration."""
+            if self.noise_levels_ is None or self.a_ is None or self.b_ is None:
+                raise ValueError("Model has not been fitted yet.")
+            ns_predictions_calib = self._get_noise_preds(X, model, self.noise_levels_)
+            return self._beta_transform(ns_predictions_calib[:, 1], self.a_, self.b_)
