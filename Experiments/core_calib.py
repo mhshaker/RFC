@@ -18,35 +18,18 @@ from estimators.IR_RF_estimator import IR_RF
 from estimators.CRF_estimator import CRF_calib
 from estimators.Shaker_calib import Shaker_calib
 from estimators.Elkan_estimator import Elkan_calib
-from estimators.Venn_estimator import Venn_calib
 from estimators.VA_estimator import VA_calib
 from estimators.TLR_estimator import treeLR_calib
-from estimators.boot_calib import Boot_calib
-from estimators.bin_calib import Bin_calib
 from sklearn.isotonic import IsotonicRegression
 from sklearn.calibration import _SigmoidCalibration
 from betacal import BetaCalibration
-from sklearn.linear_model import LinearRegression
-from scipy.stats import binned_statistic
 from sklearn.metrics import brier_score_loss
 from sklearn.metrics import log_loss
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import accuracy_score
-from sklearn.metrics import roc_curve, auc
 from sklearn.calibration import calibration_curve
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import RandomizedSearchCV
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.svm import SVC
-from sklearn.neural_network import MLPClassifier
-from sklearn.naive_bayes import GaussianNB
-import xgboost as xgb
-from sklearn.ensemble import BaggingClassifier
-
-
-import scipy
-from sklearn.metrics import mutual_info_score
 import random
 
 
@@ -183,24 +166,6 @@ def calibration(data, params, seed=0):
         rf_d_p_test = rf_d.predict_proba(data["x_test"], params["laplace"])
         results_dict[f"{data_name}_{method}_prob"] = rf_d_p_test
 
-        # # RF depth ########################################
-        # tree_depths = [estimator.tree_.max_depth for estimator in rf_d.estimators_]
-
-        # # Calculate the average depth
-        # average_depth = np.mean(tree_depths)
-        # results_dict[f"{data_name}_{method}_depth"] = average_depth
-        # # Calculate the variance of the depths
-        # depth_variance = np.var(tree_depths)
-        # results_dict[f"{data_name}_{method}_depth_var"] = depth_variance
-
-        # print("y_test ", data["y_test"].mean())
-        # print("RF_d prob", rf_d_p_test[:,1].mean())
-        # print("score", rf_d.score(data["x_test"], data["y_test"]))
-        # print("acc ", accuracy_score(data["y_test"], np.argmax(results_dict[f"{data_name}_{method}_prob"],axis=1)))
-        # print("predictions\n", rf_d.predict(data["x_test"]))
-        # print("labels\n", data["y_test"])
-        # # RF depth ######################################## end 
-
     method = "RF_opt"
     if method in calib_methods:
         time_rf_opt_s = time.time()
@@ -220,52 +185,15 @@ def calibration(data, params, seed=0):
     method = "RF_large"
     if method in calib_methods:
         time_rfl_s = time.time()
-        # RF_large_p_test_fd = bc.predict_largeRF(data["x_test"], data["x_train_calib"], data["y_train_calib"], RF)
 
-        # best_rf_params = RF.get_params().copy()
-        # best_rf_params['n_estimators'] = best_rf_params['n_estimators'] * params["boot_count"]
         random.seed(seed)
         np.random.seed(seed)
         rf_l = IR_RF(n_estimators=params["search_space"]["n_estimators"][0]* params["boot_count"], random_state=seed).fit(data["x_train_calib"], data["y_train_calib"])
         results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_rfl_s
 
-        # rf_l = IR_RF(**best_rf_params).fit(data["x_train_calib"], data["y_train_calib"])
         RF_large_p_test_fd = rf_l.predict_proba(data["x_test"], params["laplace"])
 
-        # # RF depth ########################################
-        # tree_depths = [estimator.tree_.max_depth for estimator in rf_l.estimators_]
-
-        # # Calculate the average depth
-        # average_depth = np.mean(tree_depths)
-        # results_dict[f"{data_name}_{method}_depth"] = average_depth
-        # # Calculate the variance of the depths
-        # depth_variance = np.var(tree_depths)
-        # results_dict[f"{data_name}_{method}_depth_var"] = depth_variance
-        # # RF depth ######################################## end 
-
-
         results_dict[f"{data_name}_{method}_prob"] = RF_large_p_test_fd    
-
-    # method = "RF_opt_CT"
-    # if method in calib_methods:
-    #     time_rf_ct = time.time()
-
-    #     ct_param_space = params["search_space"].copy()
-    #     ct_param_space["min_samples_leaf"] = params["curt_v"]
-
-    #     rf = IR_RF(random_state=seed)
-    #     RS_ct_2 = RandomizedSearchCV(rf, ct_param_space, scoring=["neg_brier_score"], refit="neg_brier_score", cv=params["opt_cv"], n_iter=params["opt_n_iter"], random_state=seed)
-    #     RS_ct_2.fit(data["x_train_calib"], data["y_train_calib"])
-    #     RF_ct = RS_ct_2.best_estimator_
-
-    #     results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_rf_ct
-    #     rfct_p_test = RF_ct.predict_proba(data["x_test"])
-    #     results_dict[f"{data_name}_{method}_prob"] = rfct_p_test
-    #     if "CL" in metrics:
-    #         results_dict[f"{data_name}_{method}_prob_c"] = RF_ct.predict_proba(data["X"]) 
-
-
-
 
     method = "Platt"
     if method in calib_methods:
@@ -310,7 +238,6 @@ def calibration(data, params, seed=0):
 
         shaker_p_test = convert_prob_2D(shaker_calib.predict(data["x_test"], RF)) # [:,1]
         results_dict[f"{data_name}_{method}_prob"] = shaker_p_test
-        # results_dict[f"{data_name}_{method}_fit"] = shaker_calib.predict(tvec)[:,1]
 
     # Venn abers
     method = "VA"
@@ -334,16 +261,6 @@ def calibration(data, params, seed=0):
         results_dict[f"{data_name}_{method}_prob"] = beta_p_test
         results_dict[f"{data_name}_{method}_fit"] = beta_calib.predict(tvec)
 
-    # tree LR calib
-    method = "tlr"
-    if method in calib_methods:
-        time_tlr_s = time.time()
-        tlr_calib = treeLR_calib().fit(RF, data["x_train"] ,data["y_train"], data["x_calib"], data["y_calib"])
-        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_tlr_s + time_rf_opt_calib
-        
-        tlr_p_test = tlr_calib.predict(data["x_test"])
-        results_dict[f"{data_name}_{method}_prob"] = tlr_p_test
-        # results_dict[data["name"] + "_tlr_fit"] = tlr_calib.predict(convert_prob_2D(tvec))[:,1]
 
     method = "CT"
     if method in calib_methods:
@@ -379,6 +296,16 @@ def calibration(data, params, seed=0):
         results_dict[f"{data_name}_{method}_prob"] = elkan_p_test
         results_dict[f"{data_name}_{method}_fit"] = elkan_calib.predict(tvec)[:,1]
 
+    # tree LR calib
+    method = "tlr"
+    if method in calib_methods:
+        time_tlr_s = time.time()
+        tlr_calib = treeLR_calib().fit(RF, data["x_train"] ,data["y_train"], data["x_calib"], data["y_calib"])
+        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_tlr_s + time_rf_opt_calib
+        
+        tlr_p_test = tlr_calib.predict(data["x_test"])
+        results_dict[f"{data_name}_{method}_prob"] = tlr_p_test
+
     # RF ranking + ISO
     method = "Rank"
     if method in calib_methods:
@@ -392,211 +319,6 @@ def calibration(data, params, seed=0):
         rank_p_test = convert_prob_2D(iso_rank.predict(x_test_rank))
         results_dict[f"{data_name}_{method}_prob"] = rank_p_test
 
-    ### models
-
-    method = "DT_opt"
-    if method in calib_methods:
-        time_dt_opt_s = time.time()
-        search_space_dt = {
-                "criterion": ["gini", "entropy", "log_loss"],
-                "splitter": ['best', 'random'],
-                "max_depth": np.arange(2, 100).tolist(),
-                "min_samples_split": np.arange(2, 11).tolist(),
-                "min_samples_leaf": np.arange(1, 11).tolist(),
-                "max_features": ['sqrt', 'log2', None],
-                }
-        random.seed(seed)
-        np.random.seed(seed)
-        dt = DecisionTreeClassifier(random_state=seed)
-        RS_dt = RandomizedSearchCV(dt, search_space_dt, scoring=["neg_brier_score"], refit="neg_brier_score", cv=params["opt_cv"], n_iter=params["opt_n_iter"], random_state=seed)
-        RS_dt.fit(data["x_train_calib"], data["y_train_calib"])
-        dt = RS_dt.best_estimator_
-        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_dt_opt_s
-
-        dt_p_test = dt.predict_proba(data["x_test"])
-        results_dict[f"{data_name}_{method}_prob"] = dt_p_test
-        
-    method = "LR_opt"
-    if method in calib_methods:
-        time_lr_opt_s = time.time()
-        search_space_lr = {
-                "penalty": ['l2', None],
-                "C": [0.001, 1, 10, 100],
-                "solver": ['newton-cholesky', 'newton-cg', 'lbfgs', 'sag', 'saga'],
-                "max_iter":  [100, 500, 1000],
-                "intercept_scaling": [0.1, 1, 10],
-                }
-        random.seed(seed)
-        np.random.seed(seed)
-        lr = LogisticRegression(random_state=seed)
-        RS_lr = RandomizedSearchCV(lr, search_space_lr, scoring=["neg_brier_score"], refit="neg_brier_score", cv=params["opt_cv"], n_iter=params["opt_n_iter"], random_state=seed)
-        RS_lr.fit(data["x_train_calib"], data["y_train_calib"])
-        lr = RS_lr.best_estimator_
-        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_lr_opt_s
-        
-        lr_p_test = lr.predict_proba(data["x_test"])
-        results_dict[f"{data_name}_{method}_prob"] = lr_p_test
-        
-    method = "LR_d"
-    if method in calib_methods:
-        time_lr_opt_s = time.time()
-        random.seed(seed)
-        np.random.seed(seed)
-        lr = LogisticRegression(random_state=seed)
-        lr.fit(data["x_train_calib"], data["y_train_calib"])
-        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_lr_opt_s
-        
-        lr_p_test = lr.predict_proba(data["x_test"])
-        results_dict[f"{data_name}_{method}_prob"] = lr_p_test
-
-    method = "SVM_opt"
-    if method in calib_methods:
-        time_svm_opt_s = time.time()
-        search_space_svm = {
-                'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
-                'C': [0.1, 1, 10, 100],
-                'degree': [2, 3, 4],
-                'gamma': ['scale', 'auto', [0.1, 1, 10]],
-                'coef0': [0, 1, 2],
-                'shrinking': [True, False],
-                'class_weight': [None, 'balanced'],
-                'max_iter': [1000, 5000, 10000],
-                # 'random_seed': list(range(101)),
-                'decision_function_shape': ['ovo', 'ovr'],
-                'tol': [1e-4, 1e-3, 1e-2],
-                'probability': [True]
-            }
-        random.seed(seed)
-        np.random.seed(seed)
-        svm = SVC(random_state=seed)
-        RS_svm = RandomizedSearchCV(svm, search_space_svm, scoring=["neg_brier_score"], refit="neg_brier_score", cv=params["opt_cv"], n_iter=params["opt_n_iter"], random_state=seed)
-        RS_svm.fit(data["x_train_calib"], data["y_train_calib"])
-        svm = RS_svm.best_estimator_
-        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_svm_opt_s
-
-        svm_p_test = svm.predict_proba(data["x_test"])
-        results_dict[f"{data_name}_{method}_prob"] = svm_p_test
-        
-    method = "SVM_d"
-    if method in calib_methods:
-        time_svm_opt_s = time.time()
-        random.seed(seed)
-        np.random.seed(seed)
-        svm = SVC(random_state=seed, probability=True)
-        svm.fit(data["x_train_calib"], data["y_train_calib"])
-        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_svm_opt_s
-        svm_p_test = svm.predict_proba(data["x_test"])
-        results_dict[f"{data_name}_{method}_prob"] = svm_p_test
-        
-    method = "DNN_opt"
-    if method in calib_methods:
-        time_nn_opt_s = time.time()
-        search_space_nn = {
-            'hidden_layer_sizes': [(50, 25), (100, 50), (100, 50, 25), (100, 100, 50), (100, 100, 100, 50)],
-            'activation': ['relu', 'tanh'],
-            'solver': ['adam', 'sgd'],
-            'alpha': [0.0001, 0.001, 0.01],
-            'learning_rate': ['constant', 'invscaling', 'adaptive'],
-            'max_iter': [200, 300, 500],
-            'early_stopping': [False, True]
-        }
-        random.seed(seed)
-        np.random.seed(seed)
-        nn = MLPClassifier(random_state=seed)
-        RS_nn = RandomizedSearchCV(nn, search_space_nn, scoring=["neg_brier_score"], refit="neg_brier_score", cv=params["opt_cv"], n_iter=params["opt_n_iter"], random_state=seed)
-        RS_nn.fit(data["x_train_calib"], data["y_train_calib"])
-        nn = RS_nn.best_estimator_
-        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_nn_opt_s
-
-        nn_p_test = nn.predict_proba(data["x_test"])
-        results_dict[f"{data_name}_{method}_prob"] = nn_p_test
-
-    method = "GNB_opt"
-    if method in calib_methods:
-        time_gnb_opt_s = time.time()
-        search_space_gnb = {
-            'var_smoothing': [1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1.0],
-        }
-        random.seed(seed)
-        np.random.seed(seed)
-        gnb = GaussianNB()
-        RS_gnb = RandomizedSearchCV(gnb, search_space_gnb, scoring=["neg_brier_score"], refit="neg_brier_score", cv=params["opt_cv"], n_iter=10, random_state=seed)
-        RS_gnb.fit(data["x_train_calib"], data["y_train_calib"])
-        gnb = RS_gnb.best_estimator_
-        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_gnb_opt_s
-
-        gnb_p_test = gnb.predict_proba(data["x_test"])
-        results_dict[f"{data_name}_{method}_prob"] = gnb_p_test
-        
-    method = "XGB_opt"
-    if method in calib_methods:
-        time_xgb_s = time.time()
-
-        search_space_xgb = {
-            'n_estimators': params["search_space"]["n_estimators"],
-            'max_depth': params["search_space"]["max_depth"],
-            'learning_rate': [0.01, 0.05, 0.1, 0.2],
-            'subsample': [0.6, 0.7, 0.8, 0.9, 1.0],
-            'colsample_bytree': [0.6, 0.7, 0.8, 0.9, 1.0],
-            'gamma': [0, 0.1, 0.2, 0.3, 0.4],
-            'min_child_weight': [1, 2, 3, 4, 5]
-        }
-
-        random.seed(seed)
-        np.random.seed(seed)
-
-        # Create the XGBoost classifier
-        xgb_m = xgb.XGBClassifier(eval_metric='logloss')
-        RS_xgb = RandomizedSearchCV(xgb_m, search_space_xgb, scoring=["neg_brier_score"], refit="neg_brier_score", cv=params["opt_cv"], n_iter=params["opt_n_iter"], random_state=seed)
-        RS_xgb.fit(data["x_train_calib"], data["y_train_calib"])
-        xgb_m = RS_xgb.best_estimator_
-        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_xgb_s
-
-        xgb_p_test = xgb_m.predict_proba(data["x_test"])
-        results_dict[f"{data_name}_{method}_prob"] = xgb_p_test
-
-
-    method = "XGB"
-    if method in calib_methods:
-        time_xgb_s = time.time()
-
-        search_space_xgb = {
-            'n_estimators': np.arange(100),
-            'max_depth': np.arange(3, 10, 1),
-            'learning_rate': [0.01, 0.05, 0.1, 0.2],
-            'subsample': [0.6, 0.7, 0.8, 0.9, 1.0],
-            'colsample_bytree': [0.6, 0.7, 0.8, 0.9, 1.0],
-            'gamma': [0, 0.1, 0.2, 0.3, 0.4],
-            'min_child_weight': [1, 2, 3, 4, 5]
-        }
-
-        random.seed(seed)
-        np.random.seed(seed)
-
-        # Create the XGBoost classifier
-        xgb_m = xgb.XGBClassifier(n_estimators=params["search_space"]["n_estimators"][0])
-        xgb_m.fit(data["x_train_calib"], data["y_train_calib"])
-        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_xgb_s
-
-        xgb_p_test = gnb.predict_proba(data["x_test"])
-        results_dict[f"{data_name}_{method}_prob"] = xgb_p_test
-
-
-    method = "DNN_ens"
-    if method in calib_methods:
-        time_dnn_s = time.time()
-
-        random.seed(seed)
-        np.random.seed(seed)
-        dnn = MLPClassifier(hidden_layer_sizes=(100, 50, 25))
-        dnn_ens = BaggingClassifier(base_estimator=dnn, n_estimators=10, random_state=seed)
-        dnn_ens.fit(data["x_train_calib"], data["y_train_calib"])
-        results_dict[f"{data_name}_{method}_runtime"] = time.time() - time_dnn_s
-
-        nn_p_test = dnn_ens.predict_proba(data["x_test"])
-        results_dict[f"{data_name}_{method}_prob"] = nn_p_test
-
-
     if "time" in metrics:
         for method in calib_methods:
             results_dict[f"{data_name}_{method}_time"] = results_dict[f"{data_name}_{method}_runtime"]
@@ -605,17 +327,9 @@ def calibration(data, params, seed=0):
         for method in calib_methods:
             results_dict[f"{data_name}_{method}_acc"] = accuracy_score(data["y_test"], np.argmax(results_dict[f"{data_name}_{method}_prob"],axis=1))
 
-    if "auc" in metrics:
-        for method in calib_methods:
-            fpr, tpr, thresholds = roc_curve(data["y_test"], results_dict[data["name"] + "_" + method +"_prob"][:,1])
-            results_dict[f"{data_name}_{method}_auc"] = auc(fpr, tpr)
-
     if "ece" in metrics:
         for method in calib_methods:
-            pt, pp = calibration_curve(data["y_test"], results_dict[f"{data_name}_{method}_prob"][:,1], n_bins=params["ece_bins"], strategy=params["bin_strategy"])
-            results_dict[f"{data_name}_{method}_ece"] = mean_squared_error(pt, pp)
-            # results_dict[f"{data_name}_{method}_ece"] = 0 # will be updated in the plot function
-            # results_dict[f"{data_name}_{method}_ece"] = confidance_ECE(results_dict[f"{data_name}_{method}_prob"], data["y_test"], bins=params["ece_bins"])
+            results_dict[f"{data_name}_{method}_ece"] = expected_calibration_error(data["y_test"], results_dict[f"{data_name}_{method}_prob"][:,1], n_bins=params["ece_bins"])
 
     if "brier" in metrics:
         for method in calib_methods: 
@@ -625,72 +339,10 @@ def calibration(data, params, seed=0):
         for method in calib_methods:
             results_dict[f"{data_name}_{method}_logloss"] = log_loss(data["y_test"], results_dict[f"{data_name}_{method}_prob"][:,1])
 
-    if "tce_kl" in metrics:
-        for method in calib_methods:
-            # results_dict[f"{data_name}_{method}_tce_kl"] = mean_squared_error(data["tp_test"], results_dict[f"{data_name}_{method}_prob"][:,1]) # mean squared error for TCE_kl
-            
-            true_prob_ = np.concatenate((data["tp_test"].reshape(-1,1), (1-data["tp_test"]).reshape(-1,1)), axis=1)
-            pred_prob_ = np.concatenate((results_dict[f"{data_name}_{method}_prob"][:,1].reshape(-1,1), (1-results_dict[f"{data_name}_{method}_prob"][:,1]).reshape(-1,1)), axis=1)
-            results_dict[f"{data_name}_{method}_tce_kl"] = kl_divergence(true_prob_, pred_prob_)  # TCE is the KL divergence with epsilon to avoid inf problem       
     if "tce_mse" in metrics:
         for method in calib_methods:
             results_dict[f"{data_name}_{method}_tce_mse"] = mean_squared_error(data["tp_test"], results_dict[f"{data_name}_{method}_prob"][:,1]) # mean squared error for TCE
     
-    if "prob_ent" in metrics:
-        for method in calib_methods:
-            results_dict[f"{data_name}_{method}_prob_ent"] = calculate_entropy(results_dict[f"{data_name}_{method}_prob"][:,1]) # mean squared error for TCE
-    if "true_prob_ent" in metrics:
-        for method in calib_methods:
-            results_dict[f"{data_name}_{method}_true_prob_ent"] = calculate_entropy(np.array(data["tp_test"])) # mean squared error for TCE
-            # print("test data median", np.median(data["tp_test"]))
-            # print("true ent", results_dict[f"{data_name}_{method}_true_prob_ent"])
-            # print("true ent shape", data["tp_test"].shape)
-            # print("---------------------------------")
-    if "IL" in metrics:
-        for method in calib_methods:
-            results_dict[f"{data_name}_{method}_IL"] = mean_squared_error(data["tp_test"], data["y_test"])  
-    if "CLGL" in metrics:
-        for method in calib_methods:
-            results_dict[f"{data_name}_{method}_CLGL"] = results_dict[f"{data_name}_{method}_brier"] - results_dict[f"{data_name}_{method}_IL"]
-
-    if "unique_prob" in metrics:
-        for method in calib_methods:
-            results_dict[f"{data_name}_{method}_unique_prob"] = np.array(len(np.unique(results_dict[f"{data_name}_{method}_prob"][:,1]))) # mean squared error for TCE
-            # print(f"{data_name}_{method} unique prob count ", results_dict[f"{data_name}_{method}_unique_prob"])
-
-    if "BS" in metrics:
-
-        # u = np.unique(results_dict[f"{data_name}_RF_prob_c"][:,1])
-        # c_method = data["tp"].copy()
-        # for v in u:
-        #     e_index = np.argwhere(results_dict[f"{data_name}_RF_prob_c"][:,1] == v)
-        #     e_labels_mean = data["tp"][e_index].mean()
-        #     c_method[e_index] = e_labels_mean
-        
-        # c_method_test = c_method[data["test_index"]]
-
-
-        for method in calib_methods:
-            # calculate C_test
-            u = np.unique(results_dict[f"{data_name}_{method}_prob_c"][:,1])
-            c_method = data["tp"].copy()
-            for v in u:
-                e_index = np.argwhere(results_dict[f"{data_name}_{method}_prob_c"][:,1] == v)
-                e_labels_mean = data["tp"][e_index].mean()
-                c_method[e_index] = e_labels_mean
-            
-            # c_method_test = c_method[data["test_index"]]
-            
-            CL = mean_squared_error(results_dict[f"{data_name}_{method}_prob_c"][:,1], c_method) # S,C
-            GL = mean_squared_error(c_method, data["tp"]) # C, Q
-            IL = mean_squared_error(data["tp"], data["y"]) # Q, Y
-            BS = mean_squared_error(data["y"], results_dict[f"{data_name}_{method}_prob_c"][:,1])
-            results_dict[f"{data_name}_{method}_CL"] = CL
-            results_dict[f"{data_name}_{method}_GL"] = GL
-            results_dict[f"{data_name}_{method}_IL"] = IL
-            results_dict[f"{data_name}_{method}_BS"] = CL + GL + IL
-            results_dict[f"{data_name}_{method}_BS2"] = BS
-
     if params["plot"] == False:
         filtered_res_dict = {key: value for key, value in results_dict.items() if "_prob" not in key}
         filtered_res_dict = {key: value for key, value in filtered_res_dict.items() if "_fit" not in key}
@@ -896,32 +548,12 @@ def plot_probs(exp_data_name, probs_runs, data_runs, params, ref_plot_name="RF",
             prob_true_ref, prob_pred_ref = calibration_curve(all_run_y, all_run_probs_ref[:,1], n_bins=params["ece_bins"], strategy=params["bin_strategy"])
             plt.scatter(prob_true_ref, prob_pred_ref, marker='.', alpha=0.2, c="gray") # Calibrated probs
             
-        # plt.scatter(data["tp_train"], probs[f"{exp_data_name}_{ref_plot_name}_prob_train"][:,1], marker='.', c=[colors[c] for c in data["y_train"].astype(int)]) # RF train probs 
-
-
-        # ################## Just to test vertical and horisantal averaging
-        # bin_means, bin_edges, binnumber = binned_statistic(data["tp_test"], probs[f"{exp_data_name}_{ref_plot_name}_prob"][:,1], bins=100) # Mean of the calibrated probs
-        # true_binded = (bin_edges[:-1] + bin_edges[1:])/2
-        # plt.scatter(true_binded, bin_means, label='binned statistic of data')
-        # v_tce = mean_squared_error((bin_edges[:-1] + bin_edges[1:])/2, bin_means)
-
-        # y = predict_bin(true_binded, bin_means, probs[f"{exp_data_name}_{method}_prob"][:,1])
-        # plt.scatter(data["tp_test"], y, marker='.', c=[colors[c] for c in all_run_y.astype(int)]) # Calibrated probs
-
-
-        # bin_means, bin_edges, binnumber = binned_statistic(probs[f"{exp_data_name}_{method}_prob"][:,1], data["tp_test"], bins=100) # Horizantal Mean of the calibrated probs
-        # plt.scatter((bin_edges[:-1] + bin_edges[1:])/2, bin_means, label='binned statistic of data')
-        # h_tce = mean_squared_error((bin_edges[:-1] + bin_edges[1:])/2, bin_means)
-        # ##################
         if "synthetic" in params["data_name"]:
             calib_tce = mean_squared_error(all_run_tp, all_run_probs[:,1]) # calculate TCE to add to the calib method plot
             calib_tce_ref = mean_squared_error(all_run_tp, all_run_probs_ref[:,1]) # calculate TCE to add to the calib method plot
             tce_txt = f" (TCE {calib_tce:0.5f})"
             tce_ref = f" (TCE {calib_tce_ref:0.5f})"
         else:
-            # print("exp_data_name", exp_data_name)
-            # print("method", method)
-            # print("prob shape", probs[f"{exp_data_name}_{method}_prob"].shape)
             calib_ece = mean_squared_error(prob_true, prob_pred) # confidance_ECE(all_run_probs, all_run_y, bins=params["ece_bins"])
             calib_ece_ref = mean_squared_error(prob_true_ref, prob_pred_ref) # confidance_ECE(all_run_probs_ref, all_run_y, bins=params["ece_bins"])
             if corrct_ece:
@@ -929,7 +561,6 @@ def plot_probs(exp_data_name, probs_runs, data_runs, params, ref_plot_name="RF",
 
             ece_txt = f" (ECE {calib_ece:0.5f})"
             ece_ref = f" (ECE {calib_ece_ref:0.5f})"
-        # calib_tce = mean_squared_error(data["tp_test"], y) # calculate TCE to add to the calib method plot
         
         if (method == "ISO" or method == "CRF" or method == "Line" or method == "Platt" or method =="Beta" or method =="VA") and calib_plot:
             plt.plot(probs_runs[f"{exp_data_name}_{method}_fit"][0], tvec, c="blue")
@@ -1078,14 +709,6 @@ def vialin_plot(results_dict, metrics, calib_methods, data_list):
             df = pd.DataFrame(columns=calib_methods)
             for method in calib_methods:
                 df[method] = np.array(results_dict[data+ "_" + method + "_"+ metric])
-            # print("df", df.head())
-            # fig, ax1 = plt.subplots()
-            # ax1.violinplot(df, showmeans=True) 
-            # ax1.set_xticks(np.arange(len(calib_methods)+1), labels=[""]+ calib_methods)
-            # # Rotate the tick labels by 90 degrees
-            # plt.xticks(rotation = 90) 
-            # plt.savefig(f"results/vialin_plot/{data}_{metric}.pdf", format='pdf', transparent=True)
-            # plt.close() 
 
             # Create a figure and axis
             fig, ax = plt.subplots()
@@ -1102,11 +725,52 @@ def vialin_plot(results_dict, metrics, calib_methods, data_list):
             ax.set_ylabel('Values')
             ax.set_title('Violin Plot with Standard Error')
             plt.xticks(rotation = 45)
-            # # Add error bars for each group
-            # for i, (mean, se) in enumerate(zip(means, std_errors)):
-            #     ax.errorbar(i, mean, yerr=se, color='black', capsize=5, linewidth=1.5, marker='o')
 
             plt.grid(True)
             plt.savefig(f"results/vialin_plot/{data}_{metric}.pdf", format='pdf', transparent=True)
             plt.close() 
     return df_dict
+
+
+def expected_calibration_error(pred_prob, true_labels, n_bins=10):
+    """
+    Computes the Expected Calibration Error (ECE).
+
+    Parameters:
+    -----------
+    pred_prob : np.ndarray
+        A 1D NumPy array of predicted probabilities (confidence scores).
+
+    true_labels : np.ndarray
+        A 1D NumPy array of true binary labels (0 or 1).
+
+    n_bins : int, optional (default=10)
+        Number of n_bins used to compute the ECE.
+
+    Returns:
+    --------
+    float
+        The Expected Calibration Error.
+
+    Example:
+    --------
+    >>> pred_prob = np.array([0.1, 0.4, 0.35, 0.8, 0.95])
+    >>> true_labels = np.array([0, 0, 1, 1, 1])
+    >>> sq_ece = expected_calibration_error(pred_prob, true_labels, n_bins=10)
+    >>> print(f"ECE: {sq_ece:.4f}")
+    """
+
+    bin_edges = np.linspace(0.0, 1.0, n_bins + 1)  # Define bin edges
+    bin_indices = np.digitize(pred_prob, bin_edges, right=True) - 1  # Assign n_bins
+    
+    ece = 0.0  # Initialize ECE
+    for i in range(n_bins):
+        mask = bin_indices == i  # Get indices for current bin
+        if np.any(mask):  # If bin is not empty
+            avg_confidence = np.mean(pred_prob[mask])  # Mean predicted probability
+            avg_accuracy = np.mean(true_labels[mask])  # Mean actual accuracy
+            bin_size = np.sum(mask) / len(pred_prob)  # Proportion of samples in bin
+            
+            ece += np.abs(avg_confidence - avg_accuracy) * bin_size  # Weighted error
+
+    return ece
