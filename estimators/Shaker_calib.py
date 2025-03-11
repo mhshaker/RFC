@@ -13,7 +13,7 @@ def convert_prob_2D(prob1D):
     return np.column_stack((prob_second_class, prob1D))
 
 class Shaker_calib(BaseEstimator, RegressorMixin):
-    def __init__(self, initial_noise_level=0.1, noise_sample=50, global_noise=True, n_jobs=-1, seed=0):
+    def __init__(self, initial_noise_level=0.1, noise_sample=1000, global_noise=True, n_jobs=-1, seed=0):
         """
         Parameters:
         - initial_noise_level: Initial noise level for optimization.
@@ -58,7 +58,7 @@ class Shaker_calib(BaseEstimator, RegressorMixin):
             return base_calls, base_random_starts  # Global noise is 1D, so no need for more calls
         
         # Scale optimization calls based on the number of features
-        n_calls = min(max(base_calls, 10 * n_features), 500)
+        n_calls = min(max(base_calls, 10 * n_features), 300)
         n_random_starts = min(max(base_random_starts, n_features), 100)
         
         return n_calls, n_random_starts
