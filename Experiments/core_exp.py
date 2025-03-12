@@ -13,6 +13,7 @@ from sklearn.datasets import make_classification
 from sklearn.manifold import TSNE
 import random
 from sklearn.preprocessing import MinMaxScaler
+import re
 
 np.random.seed(0)
 
@@ -80,9 +81,24 @@ def load_data_runs(params, exp_data_name, real_data_path=".", exp_key=""):
                                                                     class2_cov_min = params["class2_cov_min"], 
                                                                     class2_cov_max = params["class2_cov_max"]
                                                                     )
-        elif params["data_name"] == "synthetic_nn":
-            generator = dp.SyntheticDataGenerator(num_features=params["n_features"], num_classes=2, hidden_layers=[64,32],seed=params["seed"])
-            X, y, tp = generator.generate_data(num_samples=params["data_size"], temperature=0.1, mask_ratio=0, x_grid=False)
+        elif "synthetic_nn" in params["data_name"]:
+            s_data_seed = re.findall(r'\d+', params["data_name"])
+            if s_data_seed:
+                s_data_seed = int(s_data_seed[0])
+                # Set all random seeds
+                random.seed(s_data_seed)
+                np.random.seed(s_data_seed)
+
+                # Define a random number of hidden layers
+                num_layers = random.randint(1, 5)
+                hidden_layers = [random.randint(16, 128) for _ in range(num_layers)]
+
+                generator = dp.SyntheticDataGenerator(num_features=params["n_features"], num_classes=2, hidden_layers=hidden_layers, seed=s_data_seed)
+                X, y, tp = generator.generate_data(num_samples=params["data_size"], temperature=0.1, mask_ratio=0, x_grid=False)
+
+            else:
+                generator = dp.SyntheticDataGenerator(num_features=params["n_features"], num_classes=2, hidden_layers=[64,32],seed=params["seed"])
+                X, y, tp = generator.generate_data(num_samples=params["data_size"], temperature=0.1, mask_ratio=0, x_grid=False)
 
 
         if params["plot_data"]:

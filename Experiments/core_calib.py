@@ -341,7 +341,7 @@ def calibration(data, params, seed=0):
 
     if "tce_mse" in metrics:
         for method in calib_methods:
-            results_dict[f"{data_name}_{method}_tce_mse"] = mean_squared_error(data["tp_test"], results_dict[f"{data_name}_{method}_prob"][:,1]) # mean squared error for TCE
+            results_dict[f"{data_name}_{method}_tce_mse"] = mean_squared_error(data["tp_test"][:,1], results_dict[f"{data_name}_{method}_prob"][:,1]) # mean squared error for TCE
     
     if params["plot"] == False:
         filtered_res_dict = {key: value for key, value in results_dict.items() if "_prob" not in key}
